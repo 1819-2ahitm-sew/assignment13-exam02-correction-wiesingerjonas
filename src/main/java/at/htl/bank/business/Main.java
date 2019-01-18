@@ -4,6 +4,7 @@ import at.htl.bank.model.BankKonto;
 import at.htl.bank.model.GiroKonto;
 import at.htl.bank.model.SparKonto;
 
+import javax.sql.rowset.spi.SyncResolver;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,8 +14,10 @@ import java.util.Scanner;
  * Legen Sie eine statische Liste "konten" an, in der Sie die einzelnen Konten speichern
  *
  */
+
 public class Main {
 
+   static ArrayList<BankKonto> konten = new ArrayList<BankKonto>();
   // die Konstanten sind package-scoped wegen der Unit-Tests
   static final double GEBUEHR = 0.02;
   static final double ZINSSATZ = 3.0;
@@ -31,7 +34,9 @@ public class Main {
    * @param args
    */
   public static void main(String[] args) {
-
+    erstelleKonten(KONTENDATEI);
+    fuehreBuchungenDurch(BUCHUNGSDATEI);
+    schreibeKontostandInDatei(ERGEBNISDATEI);
   }
 
   /**
@@ -46,7 +51,23 @@ public class Main {
    */
   private static void erstelleKonten(String datei) {
 
-        System.out.println("erstelleKonten noch nicht implementiert");
+        try (Scanner scanner = new Scanner(new FileReader(datei))){
+
+            scanner.nextLine();
+            while (scanner.hasNextLine()){
+                String line = scanner.nextLine();
+                String[] infos = line.split(";");
+                if(infos[0].equals("Sparkonto")){
+                    konten.add(new SparKonto(infos[1], Double.valueOf(infos[2]), ZINSSATZ));
+                }else{
+                    konten.add(new GiroKonto(infos[1], Double.valueOf(infos[2]), GEBUEHR));
+                }
+            }
+
+        } catch (FileNotFoundException e) {
+            System.err.println(e.getMessage());
+        }
+      System.out.println("Erstellung der Konten beendet");
   }
 
   /**
@@ -64,7 +85,25 @@ public class Main {
    * @param datei BUCHUNGSDATEI
    */
   private static void fuehreBuchungenDurch(String datei) {
-        System.out.println("fuehreBuchungenDurch noch nicht implementiert");
+
+      try (Scanner scanner = new Scanner(new FileReader(datei))){
+
+          scanner.nextLine();
+          while (scanner.hasNextLine()){
+              BankKonto person1;
+              BankKonto person2;
+              String line = scanner.nextLine();
+              String[] infos = line.split(";");
+              person1 = findeKontoPerName(infos[0]);
+              person2 = findeKontoPerName(infos[1]);
+              person1.abheben(Double.valueOf(infos[2]));
+              person2.einzahlen(Double.valueOf(infos[2]));
+          }
+
+      } catch (FileNotFoundException e) {
+          System.err.println(e.getMessage());
+      }
+        System.out.println("Buchung der Beträge beendet");
   }
 
   /**
@@ -87,7 +126,25 @@ public class Main {
    * @param datei ERGEBNISDATEI
    */
   private static void schreibeKontostandInDatei(String datei) {
-        System.out.println("schreibeKontostandInDatei noch nicht implementiert");
+
+      try(PrintWriter writer = new PrintWriter(new FileWriter(datei))){
+
+          writer.println("name;kontotyp;kontostand");
+
+          for (int i = 0; i < konten.size(); i++) {
+              if (konten.get(i) instanceof SparKonto){
+                  ((SparKonto) konten.get(i)).zinsenAnrechnen();
+                  writer.println(konten.get(i).getName() + ";SparKonto;" + konten.get(i).getKontoStand());
+              }else{
+                  writer.println(konten.get(i).getName() + ";Girokonto;" + konten.get(i).getKontoStand());
+              }
+          }
+
+
+      } catch (IOException e) {
+          System.err.println(e.getMessage());
+      }
+      System.out.println("Ausgabe in Ergebnisdatei beendet");
   }
 
   /**
@@ -100,7 +157,15 @@ public class Main {
    *         nicht gefunden wird
    */
   public static BankKonto findeKontoPerName(String name) {
-       return null;
+
+      BankKonto foundname = null;
+      for (BankKonto listenelement : konten) {
+          if (listenelement.getName().equals(name)) {
+              foundname = listenelement;
+          }
+      }
+
+      return foundname;
   }
 
 }
